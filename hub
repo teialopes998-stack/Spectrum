@@ -1,0 +1,351 @@
+-- Leaked by K1s 
+-- GO SKID MY NIGAS
+
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local HS = game:GetService("HttpService")
+local player = Players.LocalPlayer
+
+-- ------------------------------------------------------------
+-- EARLY CONFIG LOAD (for intro sound setting)
+-- ------------------------------------------------------------
+local introSoundEnabled = true
+if isfile and isfile("Venom_PC.json") then
+    local ok, data = pcall(function() return HS:JSONDecode(readfile("Venom_PC.json")) end)
+    if ok and type(data) == "table" and data.introSoundEnabled ~= nil then
+        introSoundEnabled = data.introSoundEnabled
+    end
+end
+-- Load Cyber extras from saved config
+if isfile and isfile("Venom_PC.json") then
+    local ok2, d2 = pcall(function() return HS:JSONDecode(readfile("Venom_PC.json")) end)
+    if ok2 and type(d2)=="table" then
+        if type(d2.animEnabled)=="boolean" then animEnabled=d2.animEnabled end
+        if type(d2.backgroundEnabled)=="boolean" then backgroundEnabled=d2.backgroundEnabled end
+        if type(d2.backgroundIndex)=="number" then backgroundIndex=d2.backgroundIndex end
+    end
+end
+
+-- ------------------------------------------------------------
+-- INTRO SOUND (only if enabled)
+-- ------------------------------------------------------------
+local introSoundInstance = nil
+if introSoundEnabled then
+    local urlIntro = "https://files.catbox.moe/hg5cr4.mp3"
+    local numeFisier = "movee_intro.mp3"
+
+    local ok, data = pcall(function() return game:HttpGet(urlIntro) end)
+    if ok and data then
+        pcall(function() writefile(numeFisier, data) end)
+    end
+
+    introSoundInstance = Instance.new("Sound")
+    pcall(function()
+        introSoundInstance.SoundId = getcustomasset(numeFisier)
+        introSoundInstance.Volume = 3
+        introSoundInstance.Looped = false
+        introSoundInstance.Parent = game:GetService("CoreGui")
+        introSoundInstance:Play()
+    end)
+end
+
+repeat task.wait() until game:IsLoaded()
+
+-- ============================================================
+-- SKY THEME SYSTEM
+-- ============================================================
+local CANDY_SKY_TAG = "MoveeSkyTheme"
+local currentSkyTheme = "Night"
+local CANDY_SKY_PRESETS = {
+    ["Off"]={kind="off"},
+    ["Night"]={clock=22,brightness=2,ambient={110,100,130},outAmb={120,110,140},sky={stars=4000,moon=18,sun=0,moonTex=true},atm={dens=0.45,color={120,60,180},decay={60,20,100},glare=0.5,haze=1.2}},
+    ["Aurora"]={clock=14,brightness=3,ambient={150,120,150},outAmb={160,130,150},atm={dens=0.55,color={255,80,200},decay={255,20,150},glare=2.5,haze=3},clouds={cover=0.7,dens=0.7,color={255,240,250}}},
+    ["Sunset"]={clock=17.2,brightness=2.5,ambient={170,120,100},outAmb={180,130,110},sky={stars=0,sun=25,moon=0},atm={dens=0.5,color={255,130,60},decay={255,80,30},glare=2,haze=2.5},clouds={cover=0.55,dens=0.55,color={255,200,140}}},
+    ["Galaxy"]={clock=0,brightness=1.5,ambient={70,60,100},outAmb={80,70,110},sky={stars=10000,moon=30,sun=0},atm={dens=0.15,color={40,20,80},decay={20,10,50},glare=0.3,haze=0.5}},
+    ["Cyber"]={clock=21,brightness=2.2,ambient={90,130,170},outAmb={100,140,180},sky={stars=2000,moon=12},atm={dens=0.4,color={0,200,255},decay={150,0,255},glare=2,haze=2},clouds={cover=0.4,dens=0.6,color={100,200,255}}},
+    ["Sakura"]={clock=11,brightness=3.5,ambient={170,150,160},outAmb={180,160,170},sky={sun=8},atm={dens=0.3,color={255,200,220},decay={255,170,200},glare=1,haze=1.5},clouds={cover=0.6,dens=0.4,color={255,250,252}}},
+    ["Pink Night"]={clock=23,brightness=2.2,ambient={120,60,110},outAmb={140,70,120},sky={stars=5000,moon=22,sun=0,moonTex=true},atm={dens=0.5,color={255,80,180},decay={140,30,100},glare=0.7,haze=1.4},clouds={cover=0.3,dens=0.5,color={180,90,150}}},
+    ["Blood Moon"]={clock=22.5,brightness=1.6,ambient={130,40,40},outAmb={150,50,50},sky={stars=1500,moon=28,sun=0,moonTex=true},atm={dens=0.6,color={220,30,30},decay={120,10,10},glare=1.4,haze=2},clouds={cover=0.5,dens=0.7,color={120,30,30}}},
+    ["Emerald Dawn"]={clock=6.5,brightness=2.8,ambient={130,170,140},outAmb={140,180,150},sky={sun=18,moon=0,stars=0},atm={dens=0.4,color={80,200,140},decay={40,150,90},glare=1.8,haze=2.2},clouds={cover=0.5,dens=0.5,color={200,255,220}}},
+    ["Volcanic"]={clock=19,brightness=2,ambient={180,80,40},outAmb={200,90,50},sky={stars=200,sun=12,moon=0},atm={dens=0.75,color={255,60,0},decay={180,20,0},glare=3,haze=3.5},clouds={cover=0.8,dens=0.9,color={120,40,20}}},
+    ["Arctic"]={clock=9,brightness=3.2,ambient={200,220,235},outAmb={210,230,245},sky={sun=10,stars=0,moon=0},atm={dens=0.3,color={180,220,255},decay={140,200,240},glare=1.5,haze=1.8},clouds={cover=0.7,dens=0.6,color={250,253,255}}},
+    ["Midnight Ocean"]={clock=1.5,brightness=1.7,ambient={60,90,130},outAmb={70,100,140},sky={stars=6000,moon=24,sun=0,moonTex=true},atm={dens=0.5,color={20,60,140},decay={10,30,90},glare=0.6,haze=1.5}},
+    ["Vaporwave"]={clock=19.5,brightness=2.4,ambient={180,120,200},outAmb={190,130,210},sky={stars=1000,moon=14},atm={dens=0.45,color={255,100,220},decay={120,60,255},glare=2.2,haze=2.4},clouds={cover=0.5,dens=0.55,color={200,150,255}}},
+    ["Toxic"]={clock=13,brightness=2.5,ambient={140,180,80},outAmb={150,190,90},atm={dens=0.55,color={100,220,40},decay={60,150,20},glare=1.8,haze=2.6},clouds={cover=0.65,dens=0.7,color={180,255,120}}},
+    ["Solar Eclipse"]={clock=12,brightness=0.9,ambient={50,40,60},outAmb={60,50,70},sky={stars=3500,sun=22,moon=0},atm={dens=0.5,color={255,140,40},decay={30,20,40},glare=2.8,haze=1.8}},
+    ["Hellscape"]={clock=18,brightness=1.8,ambient={200,60,30},outAmb={220,70,40},sky={stars=100,sun=30,moon=0},atm={dens=0.85,color={255,30,0},decay={120,0,0},glare=3.5,haze=4},clouds={cover=0.95,dens=0.95,color={80,20,10}}},
+    ["Heaven"]={clock=12,brightness=4,ambient={240,235,210},outAmb={250,245,220},sky={sun=16,moon=0,stars=0},atm={dens=0.25,color={255,250,220},decay={255,240,200},glare=3,haze=1.5},clouds={cover=0.85,dens=0.5,color={255,255,255}}},
+    ["Storm"]={clock=15,brightness=1.4,ambient={90,90,110},outAmb={100,100,120},sky={stars=0,sun=6,moon=0},atm={dens=0.65,color={80,90,120},decay={40,50,80},glare=0.5,haze=3},clouds={cover=0.95,dens=0.95,color={60,65,80}}},
+    ["Sunrise"]={clock=6.2,brightness=2.8,ambient={220,180,130},outAmb={230,190,140},sky={sun=22,stars=0,moon=0},atm={dens=0.45,color={255,180,100},decay={255,140,80},glare=2.4,haze=2.2},clouds={cover=0.4,dens=0.4,color={255,220,180}}},
+    ["Deep Space"]={clock=0,brightness=1,ambient={30,25,50},outAmb={40,35,60},sky={stars=15000,moon=0,sun=0},atm={dens=0.08,color={15,5,40},decay={5,0,20},glare=0.2,haze=0.3}},
+    ["Lavender Dream"]={clock=18.5,brightness=2.6,ambient={180,160,220},outAmb={190,170,230},sky={stars=800,moon=16,sun=0},atm={dens=0.4,color={200,160,255},decay={160,120,220},glare=1.4,haze=1.8},clouds={cover=0.55,dens=0.5,color={220,200,255}}},
+    ["Inferno"]={clock=17.5,brightness=2.2,ambient={220,100,40},outAmb={235,110,50},sky={sun=26,moon=0,stars=0},atm={dens=0.6,color={255,90,20},decay={200,40,0},glare=3,haze=3.2},clouds={cover=0.7,dens=0.7,color={200,80,40}}},
+    ["Mint Sky"]={clock=10,brightness=3.2,ambient={180,230,210},outAmb={190,240,220},sky={sun=10},atm={dens=0.32,color={150,255,210},decay={100,220,180},glare=1.6,haze=1.6},clouds={cover=0.55,dens=0.45,color={240,255,250}}},
+}
+local SkyOrder={"Off","Night","Aurora","Sunset","Galaxy","Cyber","Sakura","Pink Night","Blood Moon","Emerald Dawn","Volcanic","Arctic","Midnight Ocean","Vaporwave","Toxic","Solar Eclipse","Hellscape","Heaven","Storm","Sunrise","Deep Space","Lavender Dream","Inferno","Mint Sky"}
+local function candyColor(rgb) return Color3.fromRGB(rgb[1],rgb[2],rgb[3]) end
+local function CandyApplyCustomSky(mode)
+    for _,child in ipairs(Lighting:GetChildren()) do if child:GetAttribute(CANDY_SKY_TAG) then pcall(function() child:Destroy() end) end end
+    local terrain=workspace:FindFirstChildOfClass("Terrain")
+    if terrain then for _,child in ipairs(terrain:GetChildren()) do if child:GetAttribute(CANDY_SKY_TAG) then pcall(function() child:Destroy() end) end end end
+    local preset=CANDY_SKY_PRESETS[mode]
+    if not preset or preset.kind=="off" then Lighting.ClockTime=14;Lighting.Brightness=2;Lighting.OutdoorAmbient=Color3.fromRGB(127,127,127);Lighting.Ambient=Color3.fromRGB(127,127,127);Lighting.FogEnd=100000;Lighting.GlobalShadows=true;return end
+    Lighting.FogStart=0;Lighting.FogEnd=100000;Lighting.FogColor=Color3.fromRGB(200,200,200);Lighting.ColorShift_Top=Color3.fromRGB(0,0,0);Lighting.ColorShift_Bottom=Color3.fromRGB(0,0,0);Lighting.GlobalShadows=true
+    Lighting.ClockTime=preset.clock or 14;Lighting.Brightness=preset.brightness or 2
+    if preset.outAmb then Lighting.OutdoorAmbient=candyColor(preset.outAmb) end
+    if preset.ambient then Lighting.Ambient=candyColor(preset.ambient) end
+    if preset.sky then
+        local skyInst=Instance.new("Sky");skyInst:SetAttribute(CANDY_SKY_TAG,true)
+        if preset.sky.stars then skyInst.StarCount=preset.sky.stars end
+        if preset.sky.moon then skyInst.MoonAngularSize=preset.sky.moon end
+        if preset.sky.sun then skyInst.SunAngularSize=preset.sky.sun end
+        if preset.sky.moonTex then skyInst.MoonTextureId="rbxasset://sky/moon.jpg" end
+        skyInst.Parent=Lighting
+    end
+    if preset.atm then
+        local atm=Instance.new("Atmosphere");atm:SetAttribute(CANDY_SKY_TAG,true)
+        atm.Density=preset.atm.dens or 0.3;atm.Color=candyColor(preset.atm.color);atm.Decay=candyColor(preset.atm.decay);atm.Glare=preset.atm.glare or 1;atm.Haze=preset.atm.haze or 1;atm.Parent=Lighting
+    end
+    if preset.clouds and terrain then
+        local clouds=Instance.new("Clouds");clouds:SetAttribute(CANDY_SKY_TAG,true)
+        clouds.Cover=preset.clouds.cover or 0.5;clouds.Density=preset.clouds.dens or 0.5;clouds.Color=candyColor(preset.clouds.color);clouds.Parent=terrain
+    end
+end
+
+-- ============================================================
+-- STATE
+-- ============================================================
+local TS=TweenService
+local LP=Players.LocalPlayer
+local NS,CS=59,29
+local LAGGER_SPEED=30
+local LAGGER_CARRY_SPEED=15
+local carrySpeedActive = false
+local laggerModeEnabled = false
+
+local antiRagdollEnabled,infJumpEnabled=false,false
+local medusaCounterEnabled,batCounterEnabled,unwalkEnabled=false,false,false
+local medusaDebounce,medusaLastUsed,dropActive=false,0,false
+local autoLeftEnabled,autoRightEnabled=false,false
+local autoLeftSetVisual,autoRightSetVisual=nil,nil
+local speedLabel=nil
+local autoBatEnabled=false
+local autoSwingEnabled=true
+local autoMoveSwingEnabled=false
+local autoMoveSwingInterval=0.3
+local _alSwingDebounce=false
+local _arSwingDebounce=false
+local autoBatSetVisual=nil
+local resetAutoBatMotion=nil
+local setBatCounterVisual=nil
+local startBatCounter,stopBatCounter
+local antiLagEnabled,removeAccessoriesEnabled,antiLagDescConn=false,false,nil
+local stretchRezEnabled,stretchRezConn,setStretchRezVisual=false,nil,nil
+local unwalkSavedAnimate,_anyKeyListening=nil,false
+local autoTPEnabled,autoTPHeight,autoTPConn,setAutoTPVisual=false,20,nil,nil
+local cursedResetRemote=nil
+local CURSED_RESET_GUID="f888ee6e-c86d-46e1-93d7-0639d6635d42"
+local guiTransparencyEnabled,mobileButtonsEnabled,mobileButtonsLocked=false,true,false
+local mobileButtonsSize=56
+local circleButtonsEnabled=false
+local stealBarFrame
+local mobBtnRefs={}
+local mobGuiRef=nil
+local fovValue=80
+local fovOptions={80,120,180}
+local fovIndex=1
+local laggerModePillRef=nil
+local carryModePillRef=nil
+local autoSwitchSpeedEnabled=false
+local mobBtnTransparencyEnabled=false
+local perButtonDragEnabled=false
+local brainrotDetected=false
+local activeBatBillboard=nil
+local activeMedusaBillboard=nil
+local ragdollGuiEnabled=true
+local persistentRagdollGui=nil
+local uiLocked=false
+local infJumpMode="manual"
+local holdInfJumpConn=nil
+local DROP_ASCEND_DURATION=0.2
+local DROP_ASCEND_SPEED=150
+local _GuiKeys = nil -- referinta catre Keys din GUI closure, pentru saveConfig
+
+-- ============================================================
+-- CYBER EXTRAS: BACKGROUND + ZOMBIE ANIMATIONS (din Cyber)
+-- ============================================================
+local animEnabled = false
+local backgroundEnabled = false
+local backgroundIndex = 0
+local bgImageRef = nil
+
+local BG_IMAGES = {
+    [1] = "82570501613757",
+    [2] = "89455917077259",
+    [3] = "140011519343966",
+    [4] = "122541342511357",
+    [5] = "91186886252449",
+    [6] = "121087678749100",
+    [7] = "113351045442552",
+    [8] = "123175449101989",
+    [9] = "113133243302321"
+}
+
+local function applyBackgroundImage(index)
+    backgroundIndex = index or 0
+    if not bgImageRef then return end
+    if backgroundIndex == 0 then
+        bgImageRef.Visible = false
+        backgroundEnabled = false
+    else
+        local imgId = BG_IMAGES[backgroundIndex]
+        if imgId then
+            bgImageRef.Image = "rbxassetid://" .. imgId
+            bgImageRef.Visible = true
+            backgroundEnabled = true
+        end
+    end
+end
+
+-- ANIMATII REMBEMBI (Zombie Mode) din Cyber
+local RembembiAnims = {
+    WalkAnim  = 73718308412641,
+    RunAnim   = 135515454877967,
+    JumpAnim  = 78508480717326,
+    FallAnim  = 78147885297412,
+    SwimIdle  = 129183123083281,
+    Swim      = 110657013921774,
+    ClimbAnim = 129447497744818,
+    Animation1 = 92849173543269,
+    Animation2 = 132238900951109,
+}
+
+local AnimRefs = { heartbeat=nil, savedAnimate=nil, originalAnims=nil }
+local startAnimToggle, stopAnimToggle
+
+do
+    local LP_anim = Players.LocalPlayer
+    local function isRembembiAnim(id)
+        if not id then return false end
+        for _,v in pairs(RembembiAnims) do if v == id then return true end end
+        return false
+    end
+    local function saveOriginalAnims(char)
+        local animate = char:FindFirstChild("Animate")
+        if not animate then return end
+        local function g(obj) return obj and obj.AnimationId or nil end
+        local ids = {
+            walk=g(animate.walk and animate.walk.WalkAnim),
+            run=g(animate.run and animate.run.RunAnim),
+            jump=g(animate.jump and animate.jump.JumpAnim),
+            fall=g(animate.fall and animate.fall.FallAnim),
+            climb=g(animate.climb and animate.climb.ClimbAnim),
+            swim=g(animate.swim and animate.swim.Swim),
+            swimidle=g(animate.swimidle and animate.swimidle.SwimIdle),
+            idle1=g(animate.idle and animate.idle.Animation1),
+            idle2=g(animate.idle and animate.idle.Animation2),
+        }
+        if not isRembembiAnim(ids.walk) then AnimRefs.originalAnims = ids end
+    end
+    local function applyRembembiAnims(char)
+        local animate = char:FindFirstChild("Animate")
+        if not animate then return end
+        local function s(obj, id) if obj then obj.AnimationId = "rbxassetid://" .. id end end
+        s(animate.walk and animate.walk.WalkAnim, RembembiAnims.WalkAnim)
+        s(animate.run and animate.run.RunAnim, RembembiAnims.RunAnim)
+        s(animate.jump and animate.jump.JumpAnim, RembembiAnims.JumpAnim)
+        s(animate.fall and animate.fall.FallAnim, RembembiAnims.FallAnim)
+        s(animate.climb and animate.climb.ClimbAnim, RembembiAnims.ClimbAnim)
+        s(animate.swim and animate.swim.Swim, RembembiAnims.Swim)
+        s(animate.swimidle and animate.swimidle.SwimIdle, RembembiAnims.SwimIdle)
+        s(animate.idle and animate.idle.Animation1, RembembiAnims.Animation1)
+        s(animate.idle and animate.idle.Animation2, RembembiAnims.Animation2)
+    end
+    local function restoreOriginalAnims(char)
+        local orig = AnimRefs.originalAnims
+        if not orig then return end
+        local animate = char:FindFirstChild("Animate")
+        if not animate then return end
+        local function s(obj, id) if obj and id then obj.AnimationId = id end end
+        s(animate.walk and animate.walk.WalkAnim, orig.walk)
+        s(animate.run and animate.run.RunAnim, orig.run)
+        s(animate.jump and animate.jump.JumpAnim, orig.jump)
+        s(animate.fall and animate.fall.FallAnim, orig.fall)
+        s(animate.climb and animate.climb.ClimbAnim, orig.climb)
+        s(animate.swim and animate.swim.Swim, orig.swim)
+        s(animate.swimidle and animate.swimidle.SwimIdle, orig.swimidle)
+        s(animate.idle and animate.idle.Animation1, orig.idle1)
+        s(animate.idle and animate.idle.Animation2, orig.idle2)
+    end
+    function startAnimToggle()
+        if AnimRefs.heartbeat then AnimRefs.heartbeat:Disconnect(); AnimRefs.heartbeat = nil end
+        local char = LP_anim.Character
+        if char then saveOriginalAnims(char); applyRembembiAnims(char) end
+        AnimRefs.heartbeat = RunService.Heartbeat:Connect(function()
+            if not animEnabled then return end
+            local c = LP_anim.Character
+            if c then applyRembembiAnims(c) end
+        end)
+    end
+    function stopAnimToggle()
+        if AnimRefs.heartbeat then AnimRefs.heartbeat:Disconnect(); AnimRefs.heartbeat = nil end
+        local char = LP_anim.Character
+        if char then restoreOriginalAnims(char) end
+    end
+end
+
+
+local MOB_POS_FILE="Venom_BtnPos.json"
+local function loadBtnPositions()
+    if not(isfile and isfile(MOB_POS_FILE)) then return {} end
+    local ok,data=pcall(function() return HS:JSONDecode(readfile(MOB_POS_FILE)) end)
+    if ok and type(data)=="table" then return data end; return {}
+end
+local function saveBtnPositions()
+    if not writefile then return end; if not mobGuiRef then return end
+    local out={}
+    for _,child in ipairs(mobGuiRef:GetChildren()) do
+        if child:IsA("Frame") and child.Name:sub(1,5)=="SBtn_" then
+            local lbl=child.Name:sub(6)
+            out[lbl]={xs=child.Position.X.Scale,xo=child.Position.X.Offset,ys=child.Position.Y.Scale,yo=child.Position.Y.Offset}
+        end
+    end
+    local lockFr=mobGuiRef:FindFirstChild("SBtnLock")
+    if lockFr then out["__lock"]={xs=lockFr.Position.X.Scale,xo=lockFr.Position.X.Offset,ys=lockFr.Position.Y.Scale,yo=lockFr.Position.Y.Offset} end
+    pcall(function() writefile(MOB_POS_FILE,HS:JSONEncode(out)) end)
+end
+task.spawn(function() while true do task.wait(3);pcall(saveBtnPositions) end end)
+
+local refreshSpeedModeLabel,saveConfig
+local startUnwalk,stopUnwalk,setupMedusa,stopMedusaCounter
+local startAntiRagdoll,stopAntiRagdoll,startAutoLeft,stopAutoLeft,startAutoRight,stopAutoRight
+local startAutoTP,stopAutoTP,enableAntiLag,disableAntiLag,enableStretchRez,disableStretchRez
+local startBatAimbot,stopBatAimbot,queueAutoBatStart,runDrop,runTPFloor,cursedInstaReset
+local startAutoSteal,stopAutoSteal,toggleCarryMode,toggleLaggerMode
+
+local function addShimmerToLabel(lbl,color1,color2)
+    local gr=Instance.new("UIGradient",lbl)
+    gr.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,color1 or Color3.fromRGB(200,200,200)),ColorSequenceKeypoint.new(0.5,color2 or Color3.fromRGB(255,255,255)),ColorSequenceKeypoint.new(1,color1 or Color3.fromRGB(200,200,200))})
+    gr.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.3,0),NumberSequenceKeypoint.new(0.5,0,0),NumberSequenceKeypoint.new(1,0.3,0)})
+    return gr
+end
+local fovConn=nil
+local function applyFOV()
+    if fovConn then fovConn:Disconnect() end
+    fovConn=RunService.RenderStepped:Connect(function() local cam=workspace.CurrentCamera;if cam then cam.FieldOfView=fovValue end end)
+end
+applyFOV()
+
+local function createRagdollBillboard(duration,labelText,color)
+    if not ragdollGuiEnabled then return nil end
+    local WHITE = Color3.fromRGB(255,255,255)
+    local BG    = Color3.fromRGB(12,5,10)
+    local W,H   = 210,80
+    local guiName="MoveeRagdollTimer_"..labelText
+    pcall(function()
+        local cg=game:GetService("CoreGui");local old=cg:FindFirstChild(guiName);if old then old:Destroy() end
+        local pg=LP:FindFirstCh
